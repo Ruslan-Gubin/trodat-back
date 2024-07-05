@@ -6,11 +6,11 @@ import cors from 'cors'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // app.enableCors();
-  app.use(cors({
-    credentials: true,
-    origin: '*'
-  }))
+  app.enableCors();
+  // app.use(cors({
+  //   credentials: true,
+  //   origin: '*'
+  // }))
   const appConfig = app.get(AppConfig);
 
   app.useGlobalPipes(

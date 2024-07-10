@@ -4,12 +4,15 @@ import {Browser, chromium } from "playwright";
 import { AppModule } from 'src/app.module';
 import { AppConfig } from 'src/modules/config/configs';
 import { ProductsService } from 'src/modules/products/products.service';
+import { download_image } from './save-file';
+
 
 @Injectable()
 export class Parser {
   private browser: Browser;
   private productService: ProductsService;
   private logger: Logger;
+  // private readonly uploadService: UploadService
 
   constructor(productService: ProductsService) {
     this.logger = new Logger('Parser');
@@ -44,12 +47,12 @@ export class Parser {
 
     const searchButton = await page.$('body > main > div > div > form > button');
     await searchButton.click();
-    console.log('test 1');
+    // console.log('test 1');
 
     await page.waitForLoadState("networkidle");
     const answerArr = await page.$$('body > main > div > div > ul > li > h3 > a');
 
-    console.log(`We found ${answerArr.length} products`);
+    // console.log(`We found ${answerArr.length} products`);
     if (!answerArr.length) {
       this.logger.warn('No element was found');
       await this.browser.close();
@@ -60,14 +63,14 @@ export class Parser {
     for (const answer of answerArr) {
       let i = 1;
       const productTitle = await answer.textContent();
-      console.log(`Product ${i + 1} - ${productTitle}`);
+      // console.log(`Product ${i + 1} - ${productTitle}`);
       if (productTitle === article) usingIndex = i;
       i++;
     }
 
     const firstEl = answerArr[usingIndex];
     const a = await firstEl.textContent();
-    console.log('a', a);
+    // console.log('a', a);
     await firstEl.click();
     await page.waitForLoadState('domcontentloaded')
     // Product page
@@ -78,19 +81,27 @@ export class Parser {
     });
     const productDescriptionElement = await page.$('body > main > div > div > div.product > div.product-description > div.product-text');
     const productDescription = await productDescriptionElement.innerText();
-    console.log('productDescription', productDescription);
+    // console.log('productDescription', productDescription);
     const normalizeDescription = productDescription.replaceAll('\n', ' ');
-    console.log('normalizeDescription', normalizeDescription);
+    // console.log('normalizeDescription', normalizeDescription);
     const sizeEl = await page.$('body > main > div > div > div.product > div.product-description > div.features > div > div:nth-child(1) > div:nth-child(3) > span');
     const size = await sizeEl.textContent();
 
-    console.log('test 2');
+    const patchImage = 'body > main > div > div > div.product > div.product-slider__wrap > div > div > div.slick-list > div > div > div > div > img';
+    const img = await page.$(patchImage);
+    const imgSrcUrl = await img.getAttribute('src')
+    const finalImgUrl = `https://trodat-russia.ru/${imgSrcUrl}`;
+    const imagePatch = await download_image(finalImgUrl);
+
+    // console.log('test 2');
     // await this.browser.close();
     this.logger.log('Parser successfully end');
     await page.close();
+
     return {
       description: normalizeDescription,
-      size
+      size,
+      imagePatch,
     };
   }
 

@@ -36,6 +36,7 @@ export type IntegrationProduct = {
   originCountry: string;
   imageBase64: string;
   imagesBase64: [];
+  imagePatch: string;
 };
 
 export type IntegrationGroup = {

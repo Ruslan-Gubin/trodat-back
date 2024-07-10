@@ -1,6 +1,8 @@
 import * as crypto from 'crypto';
 import * as https from 'https';
 import axios from 'axios';
+import fs  from 'fs';
+
 
 export const hashFileName = (temp_filename: string) => {
   return crypto.createHash('md5').update(temp_filename).digest('hex');
@@ -39,3 +41,5 @@ export const downloadImagesByUrl = async (urls) => {
 
   return images_meta;
 };
+
+

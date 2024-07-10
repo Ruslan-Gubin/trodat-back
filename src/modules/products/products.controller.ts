@@ -1,5 +1,6 @@
-import {Body, Controller, Get, Param, Put} from '@nestjs/common';
+import {Body, Controller, Get, Param, Put, Query} from '@nestjs/common';
 import { ProductsService } from './products.service';
+import { GetProductParamsDto } from './dto/create-parsed-product.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -9,6 +10,12 @@ export class ProductsController {
   async getProducts() {
     return await this.productsService.getProducts();
   }
+
+  @Get('frontend')
+  async getProductsFront(@Query() param: GetProductParamsDto) {
+    return await this.productsService.getProductsFront(param);
+  }
+
 
   @Get('byCategory/:categoryId')
   async getProductsByCategoryId(@Param() param: {categoryId: string}) {

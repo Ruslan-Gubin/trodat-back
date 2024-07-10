@@ -1,6 +1,6 @@
 import {BadRequestException, Injectable, InternalServerErrorException} from '@nestjs/common';
 import {Product} from './schemas/product.schema';
-import {CreateParsedProductDto} from './dto/create-parsed-product.dto';
+import {CreateParsedProductDto, GetProductParamsDto} from './dto/create-parsed-product.dto';
 import {Parser} from 'src/helpers/parser';
 import {downloadImagesByUrl} from 'src/helpers/utils';
 import {InjectModel} from "@nestjs/mongoose";
@@ -12,7 +12,7 @@ import {
   SuccessIntegrationAnswer
 } from "../../types/integration.type";
 import {CategoryService} from "../category/category.service";
-import {ParsedOptionsType, productRusFieldToEng} from "./helper";
+import {extractSizeValue, ParsedOptionsType, productRusFieldToEng} from "./helper";
 import { integrationAuthConfig, integrationBody } from '../config/configs/integration';
 
 @Injectable()
@@ -27,7 +27,8 @@ export class ProductsService {
   }
 
   async parse() {
-    this.parser.parseTrodat2('46042');
+    this.parser.parseTrodat2('4910');
+    // this.parser.parseTrodat2('46042');
     // const img = await downloadImagesByUrl(['https://paperandinkprinting.com/wp-content/uploads/2019/08/canstockphoto22402523-arcos-creator.com_-1024x1024.jpg']);
     // console.log('img', img);
   }
@@ -82,6 +83,52 @@ export class ProductsService {
       .populate('category');
   }
 
+  async getProductsFront(param: GetProductParamsDto) {
+
+    const filterParams = {
+      $and: [
+        // { name: { $regex: param.searchTitle, $options: 'i' } }, // Предполагается, что это поле 'searchTitle'
+   
+      ]
+    };
+    
+    if (param.searchTitle) {
+      filterParams.$and.push({ name: { $regex: param.searchTitle, $options: 'i' }  })
+    } 
+
+    if (param.categoryes) {
+      filterParams.$and.push({ category: { $in: param.categoryes.split(',') } });
+    }
+
+
+try {
+  const totalCount = await this.productModel.countDocuments();
+
+  const skip = (Number(param.currentPage) - 1) * Number(param.perPage);
+
+  const products = await this.productModel
+    .find(filterParams.$and.length > 0 ? filterParams : null)
+    .skip(skip)
+    .limit(Number(param.perPage))
+    .populate('category');
+
+    const filterProducts = products.filter(item => {
+      const currentDiameter = extractSizeValue(item.size);
+      const isDiapazon = currentDiameter < Number(param.maxDiameter) && currentDiameter > Number(param.minDiameter);
+      if (isDiapazon) {
+        return item;
+      }
+    })
+
+
+    return { data: filterProducts, totalCount, status: 'success'};
+} catch (error) {
+  console.error(error);
+  throw (error)
+}
+
+  }
+
   getParseOptions(description: string): ParsedOptionsType {
     const parsedOptions: ParsedOptionsType = {};
     const strArr = description
@@ -100,7 +147,7 @@ export class ProductsService {
     return parsedOptions;
   }
 
-  async createProduct1C(good: IntegrationProduct, description = '', size = '') {
+  async createProduct1C(good: IntegrationProduct, description = '', size = '', imagePatch: string = '') {
     const options = this.getParseOptions(good.description);
     const category = await this.categoryService.getCategoryBy1cId(good.ownerID);
     if (!category) console.error(`no category for product ${good.article}`);
@@ -117,7 +164,8 @@ export class ProductsService {
       equipment: options.equipment ? [options.equipment] : [],
       frame: options.frame,
       geometry: options.geometry,
-      category: category?._id || null
+      category: category?._id || null,
+      imagePatch,
     });
     return product.save();
   }
@@ -176,7 +224,7 @@ export class ProductsService {
         await goodInBD.save();
       } else {
         const parseData = await this.parser.parseTrodat2(good.article);
-        await this.createProduct1C(good, parseData.description, parseData.size);
+        await this.createProduct1C(good, parseData.description, parseData.size, parseData.imagePatch);
       }
 
     }

@@ -33,6 +33,9 @@ export class Product implements IProduct {
 
   @Prop()
   frame: string;
+  
+  @Prop()
+  imagePatch: string;
 
   @Prop()
   geometry: string;
